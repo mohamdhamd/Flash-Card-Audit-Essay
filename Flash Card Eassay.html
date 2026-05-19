@@ -1,0 +1,583 @@
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>منصة المراجعة الشاملة - Audit</title>
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+            .perspective-1000 { perspective: 1000px; }
+            .transform-style-3d { transform-style: preserve-3d; }
+            .backface-hidden { backface-visibility: hidden; }
+            .rotate-y-180 { transform: rotateY(180deg); }
+            .card-transition { transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); }
+            
+            .rate-btn { transition: all 0.2s ease; }
+            .rate-btn:active { transform: scale(0.95); }
+            
+            .status-hard { background-color: #fee2e2; color: #dc2626; border-color: #f87171; }
+            .status-medium { background-color: #fef3c7; color: #d97706; border-color: #fbbf24; }
+            .status-easy { background-color: #dcfce7; color: #16a34a; border-color: #4ade80; }
+            .status-unrated { background-color: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+
+            .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; border-radius: 10px; }
+            
+            .fade-in { animation: fadeIn 0.4s ease-in-out; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        </style>
+    </head>
+    <body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+        <!-- Top Banner -->
+        <div class="w-full bg-emerald-600 text-white text-center py-2 font-bold text-sm sm:text-base shadow-md sticky top-0 z-50">
+            سبحان الله، والحمد لله، ولا إله إلا الله، والله أكبر.
+        </div>
+
+        <!-- ================= DASHBOARD VIEW ================= -->
+        <div id="dashboard-view" class="flex-1 w-full max-w-6xl mx-auto px-4 py-8 fade-in block">
+            <header class="text-center mb-10">
+                <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-3">منصة مراجعة الـ Audit 📚</h1>
+                <p class="text-slate-500 font-bold text-lg">اختر السكشن اللي عايز تفرمه واعرف مستواك</p>
+            </header>
+
+            <!-- Sections Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="sections-grid">
+                <!-- Cards injected by JS -->
+            </div>
+        </div>
+
+        <!-- ================= STUDY VIEW ================= -->
+        <div id="study-view" class="flex-1 w-full flex flex-col items-center py-6 px-4 fade-in hidden">
+            
+            <!-- Header & Controls -->
+            <div class="w-full max-w-2xl mb-4">
+                <button onclick="goBack()" class="mb-4 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors">
+                    <span>🔙</span> رجوع للقائمة الرئيسية
+                </button>
+                
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="text-center md:text-right">
+                        <h2 id="study-title" class="text-2xl font-bold text-slate-800 mb-1">Section Title</h2>
+                        <p id="card-counter" class="text-slate-500 font-medium">كارت 1 من X</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 flex-wrap justify-center md:justify-end">
+                        <button onclick="resetSectionProgress()" class="bg-red-50 hover:bg-red-100 text-red-600 text-sm font-bold py-2 px-3 rounded-xl border border-red-200 transition-colors flex items-center gap-1" title="مسح التقييمات">
+                            🗑️ تصفير
+                        </button>
+                        <div class="flex items-center gap-2 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+                            <label for="filter" class="text-sm font-bold text-slate-600 hidden sm:block">فلتر:</label>
+                            <select id="filter" onchange="applyFilter()" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1 cursor-pointer font-medium outline-none">
+                                <option value="all">الكل</option>
+                                <option value="hard">🔴 صعب</option>
+                                <option value="medium">🟡 متوسط</option>
+                                <option value="easy">🟢 سهل</option>
+                                <option value="unrated">⚪ لم يقيم</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden w-full max-w-2xl h-[420px] bg-white rounded-2xl shadow-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center p-8 mb-6 text-center">
+                <span class="text-4xl mb-4">🤷‍♂️</span>
+                <h2 class="text-xl font-bold text-slate-600 mb-2">مفيش كروت هنا!</h2>
+                <p class="text-slate-500">جرب تغير الفلتر من فوق عشان تظهر الكروت.</p>
+            </div>
+
+            <!-- Flashcard Container -->
+            <div id="flashcard-container" class="relative w-full max-w-2xl h-[420px] cursor-pointer perspective-1000 mb-6" onclick="toggleFlip()">
+                <div id="flashcard-inner" class="w-full h-full card-transition transform-style-3d relative">
+                    
+                    <!-- Front -->
+                    <div class="absolute w-full h-full bg-white rounded-2xl shadow-lg flex flex-col items-center justify-center p-8 border-t-8 border-blue-600 backface-hidden overflow-y-auto custom-scrollbar">
+                        <span id="front-status" class="absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded-full border"></span>
+                        <span id="card-id" class="absolute top-4 left-4 bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full ltr" dir="ltr"></span>
+                        <h2 id="card-question" class="text-xl md:text-2xl font-bold text-center leading-relaxed mt-4" dir="ltr"></h2>
+                        <p class="absolute bottom-4 text-slate-400 text-sm animate-pulse flex items-center gap-1 mt-auto">
+                            <span>اضغط للقلب</span> <span class="text-lg">↻</span>
+                        </p>
+                    </div>
+
+                    <!-- Back -->
+                    <div class="absolute w-full h-full bg-slate-800 rounded-2xl shadow-lg border-t-8 border-emerald-500 backface-hidden text-white rotate-y-180 overflow-y-auto custom-scrollbar p-6">
+                        <span id="back-status" class="absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded-full border"></span>
+                        <div class="w-full min-h-full flex flex-col items-center justify-center pt-8 pb-4">
+                            <div class="text-center w-full" dir="ltr">
+                                <h3 class="text-xs text-emerald-400 font-bold tracking-widest uppercase mb-2">Answer</h3>
+                                <p id="card-answer" class="text-lg md:text-xl font-semibold text-white leading-relaxed whitespace-pre-line"></p>
+                            </div>
+                            <div class="w-full h-px bg-slate-600 my-4 rounded-full shrink-0"></div>
+                            <div class="text-center w-full shrink-0" dir="rtl">
+                                <p class="text-lg font-bold text-amber-400 flex items-center justify-center gap-2">
+                                    <span class="text-2xl">🧠</span>
+                                    <span id="card-hint"></span>
+                                </p>
+                            </div>
+                            <button id="btn-explain" onclick="toggleExplanation(event)" class="mt-5 px-5 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-200 border border-slate-500 transition-colors shadow-sm shrink-0">
+                                إظهار الشرح 💡
+                            </button>
+                            <div id="explanation-container" class="hidden mt-4 w-full bg-slate-900/80 p-5 rounded-xl border border-slate-600 text-sm text-slate-300 leading-relaxed text-right shrink-0" dir="rtl">
+                                <span id="card-explanation"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rating -->
+            <div id="rating-container" class="w-full max-w-2xl bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col items-center">
+                <p class="text-sm font-bold text-slate-500 mb-3">تقييمك لمستوى حفظك؟</p>
+                <div class="flex items-center justify-center gap-3 w-full">
+                    <button onclick="rateCard('hard')" id="btn-hard" class="rate-btn flex-1 py-2 px-2 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 font-bold hover:bg-red-100 flex flex-col items-center gap-1">
+                        <span class="text-xl">🔴</span> <span class="text-xs">صعب</span>
+                    </button>
+                    <button onclick="rateCard('medium')" id="btn-medium" class="rate-btn flex-1 py-2 px-2 rounded-xl border-2 border-yellow-200 bg-yellow-50 text-yellow-600 font-bold hover:bg-yellow-100 flex flex-col items-center gap-1">
+                        <span class="text-xl">🟡</span> <span class="text-xs">متوسط</span>
+                    </button>
+                    <button onclick="rateCard('easy')" id="btn-easy" class="rate-btn flex-1 py-2 px-2 rounded-xl border-2 border-green-200 bg-green-50 text-green-600 font-bold hover:bg-green-100 flex flex-col items-center gap-1">
+                        <span class="text-xl">🟢</span> <span class="text-xs">سهل</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div id="nav-container" class="flex items-center justify-between w-full max-w-2xl gap-4 mb-10" dir="ltr">
+                <button onclick="prevCard()" class="flex-1 bg-white hover:bg-slate-100 text-slate-700 font-bold py-4 px-4 rounded-xl shadow-sm border border-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>&larr;</span> Prev
+                </button>
+                <button onclick="nextCard()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                    Next <span>&rarr;</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Application Logic & Data -->
+        <script>
+            // --- COMPLETE DATABASE FROM ALL PDFs (NO DUPLICATES) ---
+            const auditData = {
+                sec1: {
+                    title: "Section 1: Materiality & Risk Assessment",
+                    cards: [
+                        { id: "E1", q: "Define materiality.", a: "Magnitude of misstatements that influence user decisions.", hint: "حجم بيأثر ع القرار (Magnitude... influence decisions).", explanation: "الأهمية النسبية هي حجم الغلطة اللي بتأثر على قرارات الناس العاقلة زي المستثمر والبنك." },
+                        { id: "E2", q: "Why is materiality considered a guiding principle throughout the entire audit?", a: "Influences the auditor's decisions about the nature, timing, and extent of audit procedures.", hint: "بتحدد الشغل: طبيعته، وقته، وحجمه (nature, timing, extent).", explanation: "هي الدليل بتاعنا، هي اللي بتقولنا نراجع إيه (Nature)، وامتى (Timing)، ونفحص عينة قد إيه (Extent)." },
+                        { id: "E3", q: "List the five steps included in the framework for applying materiality.", a: "1. Preliminary Judgment 2. Performance Materiality 3. Segment Estimation 4. Combined Materiality 5. Comparison.", hint: "مبدئي، أداء، تقدير، تجميع، مقارنة.", explanation: "خطوات تطبيق الأهمية النسبية: تحط سقف للميزانية، توزعه ع الحسابات، تقدر الغلط في العينة، تجمع كل الغلطات، وتقارن المجموع بالسقف." },
+                        { id: "E4", q: "What does the preliminary judgment about materiality represent?", a: "The maximum amount by which the auditor believes the statements could be misstated and not influence decisions.", hint: "السقف أو الحد الأقصى (Maximum amount).", explanation: "ده سقف الغلط المسموح بيه في الميزانية كلها من غير ما يغير قرار المستثمر." },
+                        { id: "E5", q: "Why must auditors use professional judgment instead of rigid formulas?", a: "No hard or fast rules exist; auditors must consider unique circumstances and user needs.", hint: "مفيش قواعد ناشفة (No hard or fast rules).", explanation: "المراجعة مش آلة حاسبة، مفيش قانون ثابت. المراجع بيستخدم خبرته عشان يقدر الرقم المناسب حسب ظروف كل شركة." },
+                        { id: "E6", q: "Identify the three primary materiality base concepts used as benchmarks.", a: "1. Income figures 2. Asset figures 3. Liability figures.", hint: "دخل، أصول، خصوم.", explanation: "الأساسيات اللي بنحسب عليها نسبة الأهمية، يا إما نسبة من الدخل أو الأصول أو الخصوم." },
+                        { id: "E7", q: "Detail the general quantitative guidelines for operating income materiality.", a: "Misstatements >=10% are material, <=5% are immaterial, 5-10% requires professional judgment.", hint: "10 مهم، 5 مش مهم، في النص تقدير.", explanation: "غلطة 10% من الدخل تبقى مصيبة (Material)، 5% تبقى تافهة، لو بينهم المراجع بيشغل دماغه." },
+                        { id: "E8", q: "Detail the quantitative guidelines for total asset materiality.", a: "Misstatements >=6% are material, <=3% are immaterial, 3-6% requires professional judgment.", hint: "6 مهم، 3 مش مهم، في النص تقدير.", explanation: "بالنسبة لإجمالي الأصول النسب بتنزل شوية. 6% لفوق كارثة، 3% لتحت عادي." },
+                        { id: "E9", q: "Why is operating income often the preferred benchmark?", a: "It reflects core business performance before the effects of financing decisions and taxes.", hint: "بيعكس الأساس (core performance).", explanation: "عشان بيبين شغل الشركة الأصلي بعيد عن الضرايب والفوائد." },
+                        { id: "E10", q: "Explain the 'Iceberg Phenomenon' and the required auditor response.", a: "Visible fraud is the tip; hidden mass is larger. Response: Must expand testing.", hint: "دي القمة بس (Visible tip)، لازم توسع (expand).", explanation: "الغش اللي بنمسكه بيبقى مجرد قمة جبل الجليد، عشان كده لو لقينا غش لازم نوسع العينة وندور وراهم." },
+                        { id: "E11", q: "Calculate the after-tax impact of a $120,000 understatement at a 25% tax rate.", a: "$120,000 * (1 - 0.25) = $90,000.", hint: "اضرب الغلط في المتمم بتاع الضريبة.", explanation: "أثر الغلطة على صافي الدخل بنحسبه بعد ما نشيل الضريبة. المتمم لـ 25% هو 75%." },
+                        { id: "E12", q: "Calculate adjusted ROA if NI = 400,000; Assets = 4,000,000 and understatement of 40,000.", a: "(400,000 + 40,000) / 4,400,000 = 10%.", hint: "النقص يتجمع ع الدخل، واقسم على الأصول.", explanation: "هنضيف النقص (40 ألف) على الدخل (400 ألف) ونقسم على الأصول بعد التعديل (4.4م زي المذكرة). الناتج 10%." },
+                        { id: "E13", q: "Why is fraud considered material regardless of its relative monetary size?", a: "Fraud is an intentional act of deception and a deliberate breach of trust.", hint: "تلاعب متعمد (Intentional act).", explanation: "لأن الغش معناه إن في نية سيئة وخيانة جوه الشركة، فمهما كان المبلغ تافه بيعتبر مصيبة." },
+                        { id: "E14", q: "Explain the consequences of nominal error that causes a debt covenant violation.", a: "Subjects borrower to: renegotiation, increased interest rates, expedited maturity.", hint: "البنك هيعلي الفايدة ويطلب الفلوس بدري.", explanation: "غلطة تافهة بس خلت الشركة تخدع البنك، لو البنك عرف هيسحب القرض أو يعلي الفايدة." },
+                        { id: "E15", q: "Explain how the 'Psychological Impact of Losses' affects materiality.", a: "Losses loom larger than gains in human decision-making; misstatements changing a loss to profit are material.", hint: "الخسارة بترعب أكتر من المكسب (Losses loom larger).", explanation: "الناس بتخاف من الخسارة جداً، فلو الشركة حولت خسارتها لربح بالغلط دي جريمة." },
+                        { id: "E16", q: "Why is the auditor only responsible for detecting material misstatements?", a: "Immaterial errors don't impact decisions, and detecting them would be prohibitively expensive.", hint: "الصغير مش بيأثر، ومكلف جداً ندور عليه.", explanation: "عشان التدوير على الجنيه الناقص هياخد سنين وتكلفة المراجعة هتبقى أغلى من الغلطة نفسها." },
+                        { id: "E17", q: "Define performance materiality and identify its alternative name.", a: "Allocation of preliminary judgment to segments. Alternative name: tolerable misstatement.", hint: "الغلط المسموح به (Tolerable).", explanation: "ده السقف بس بعد ما وزعناه على كل حساب لوحده." },
+                        { id: "E18", q: "What is the primary purpose of allocating materiality to audit segments?", a: "To translate overall materiality into practical, account-level thresholds.", hint: "نحوله لرقم عملي لكل حساب (practical account-level).", explanation: "عشان المراجع اللي شغال على حساب العملاء يبقى عارف سقفه كام بالظبط يقدر يشتغل عملي." },
+                        { id: "E19", q: "Why is it common to allocate more than the preliminary judgment to segments?", a: "Not all accounts will contain misstatements; overstatements and understatements offset.", hint: "مش كله بيبوظ، والغلط بيعكس بعضه (offset).", explanation: "عشان مستحيل كل الحسابات تبوظ لأقصى حد مع بعض، والغلطات بتعوض بعض." },
+                        { id: "E20", q: "A covenant requires 2m in assets. Audited balance is 1.999m. Is the error material?", a: "Yes, it is qualitatively material because it enabled avoiding violation of the debt covenant.", hint: "مهم عشان بيهرب من كسر الشرط (avoid violation).", explanation: "ألف جنيه مش هتعمل حاجة كـرقم، بس خليتهم يضحكوا ع البنك ويبانوا محققين الشروط، يبقى مهم جداً." },
+                        { id: "E21", q: "Which contextual factors are considered in the 'gray area' of the 5-10% range?", a: "Trends in earnings, industry conditions, contractual obligations.", hint: "اتجاه الربح وظروف السوق والعقود.", explanation: "لو النسبة في النص، بنشوف الشركة بتكسب ولا بتخسر، وظروف السوق إيه عشان نقرر هي مهمة ولا لأ." },
+                        { id: "E22", q: "Identify the three 'visible' stages of the sequential five-step materiality framework.", a: "Foundation (Step 1), Measurement (Step 3), and Decision (Step 5).", hint: "أساس، فحص، قرار.", explanation: "دي أهم الخطوات اللي بتبان فعلاً وإنت بتطبق الأهمية النسبية." },
+                        { id: "E23", q: "How does the 'User Perspective' influence the selection of audit benchmarks?", a: "Selection reflects users; equity investors focus on earnings, creditors on asset values.", hint: "مستثمر = ربح، بنك = أصول.", explanation: "حسب المستفيد.. لو مستثمر بنركز ع الدخل، لو بنك بنركز ع الأصول والسيولة." },
+                        { id: "E24", q: "What is the auditor's required response to discovering a detected fraud?", a: "The auditor must expand testing and investigation and reassess the overall audit strategy.", hint: "وسع الاختبارات (Expand testing).", explanation: "لو مسكت حرامي، متكتفيش، لازم تزود العينة وتراجع خطتك لأن النظام كله ممكن يكون مضروب." },
+                        { id: "E25", q: "Describe the behavioral finance concept of 'loss aversion' in auditing.", a: "The tendency to prefer avoiding losses over acquiring equivalent gains.", hint: "تجنب الخسارة أحسن من المكسب.", explanation: "الواحد بيزعل على 1000 جنيه ضاعت منه، أكتر ما يفرح بـ 1000 كسبها." }
+                    ]
+                },
+                sec2: {
+                    title: "Section 2: Materiality Steps & Risk Model",
+                    cards: [
+                        { id: "E1", q: "Define Step 1 of the Five-Step Framework of Materiality.", a: "Preliminary Judgment: involves establishment of the materiality threshold for financial statements as a whole.", hint: "خطوة 1 = سقف للميزانية ككل (threshold for statements).", explanation: "أول خطوة المراجع بيحط السقف العام للغلط المسموح بيه للشركة كلها." },
+                        { id: "E2", q: "What is the concept and purpose of Step 2?", a: "Determining Performance Materiality. Purpose: translate overall materiality into practical, account-level thresholds.", hint: "خطوة 2 (الأداء) = أرقام عملية لكل حساب (account-level thresholds).", explanation: "توزيع السقف الكبير على الحسابات الفردية عشان كل فريق مراجعة يعرف شغال إزاي." },
+                        { id: "E3", q: "Briefly explain the measurement process in Step 3.", a: "Auditor estimates misstatements in accounts within a certain segment.", hint: "خطوة 3 = المراجع بيقدر الغلطات (estimates misstatements).", explanation: "المراجع بيمسك العينة ويطلع منها الغلطات ويعملها تقدير للحساب كله." },
+                        { id: "E4", q: "Define Step 4: Combined Materiality.", a: "Aggregation of all identified and estimated misstatements across different segments.", hint: "خطوة 4 = بنجمع كل العك (Aggregation).", explanation: "بنجمع الأخطاء اللي لقيناها في الكاش والعملاء والمخزون كله على بعضه." },
+                        { id: "E5", q: "Describe the decision framework and comparison required in Step 5.", a: "Compare combined estimate with preliminary judgment. Accept if <= preliminary.", hint: "خطوة 5 = قارن بالسقف، لو أصغر اقبل (Accept).", explanation: "المقارنة النهائية. لو الغلط الكلي أقل من السقف اللي حطيناه في خطوة 1، الميزانية تتقبل." },
+                        { id: "E6", q: "Provide the exact definition of Known Misstatements.", a: "Misstatements that the auditor can determine the amount of with reasonable certainty.", hint: "غلطة إنت متأكد من رقمها (reasonable certainty).", explanation: "غلطات واضحة مفيهاش فصال، المراجع حسبها وطلعت بالأرقام." },
+                        { id: "E7", q: "List the three examples of Known Misstatements.", a: "1. Mathematical Errors. 2. Posting Errors. 3. Omission Errors.", hint: "غلط حساب، ترحيل، نسيان.", explanation: "غلطة في الجمع، أو نقلوا الرقم لدفتر الأستاذ غلط، أو نسوا فاتورة." },
+                        { id: "E8", q: "Define Likely Misstatements arising from Judgmental Differences.", a: "Arise from differences between management's and the auditor's judgment about estimates.", hint: "اختلفنا في التقدير (judgment about estimates).", explanation: "زي تقدير مخصص الديون، الإدارة شايفة 5% والمراجع شايف 10%، ده اختلاف تقديري." },
+                        { id: "E9", q: "Define Likely Misstatements arising from Projections from Samples.", a: "Projections based on tests of a sample, extrapolating findings to estimate total misstatement.", hint: "بنعمم الغلطة ع الحساب كله (extrapolates findings).", explanation: "لقينا غلطة في عينة 10%، بنقوم ضاربين الغلطة في 10 عشان نتوقع الغلط في الحساب الكلي." },
+                        { id: "E10", q: "What are the three reasons for providing Reasonable Assurance?", a: "1. Sampling 2. Fraud 3. Estimates.", hint: "عينة، غش مستخبي، وتقدير.", explanation: "بندي تأكيد 95% مش 100% لأننا بناخد عينة مش بنراجع كل حاجة، والغش بيستخبى بذكاء، والمحاسبة فيها تقديرات." },
+                        { id: "E11_15", q: "Sample Projection Formula (Questions E11-E15 concept).", a: "Projection = (Misstatement in Sample / Sample Book Value) * Population Book Value.", hint: "القانون: (الغلط ÷ العينة) × المجتمع.", explanation: "بتجيب الفرق بين الدفتر والرقم المراجع وتقسمه على رقم العينة، واللي يطلع تضربه في رقم الحساب كله." },
+                        { id: "E16_20", q: "Planned Detection Risk (PDR) Formula (Questions E16-E20 concept).", a: "PDR = AAR / (IR * CR).", hint: "خطر المراجع = الخطر المقبول ÷ (الحتمي × الرقابة).", explanation: "قانون الـ PDR السحري. دايماً الـ AAR فوق، واضرب المخاطر التانية في بعض تحت. خلي بالك من التحويل لنسب مئوية." },
+                        { id: "E21", q: "Provide the exact definition of Inherent Risk.", a: "Susceptibility of an assertion to material misstatement without considering internal controls.", hint: "خطر الحساب من غير ما تبص للرقابة (without considering).", explanation: "الخطر الطبيعي في الحساب، زي الكاش دايماً بيتسرق سواء حطيت كاميرات ولا لأ." },
+                        { id: "E22", q: "Provide the exact definition of Control Risk.", a: "Likelihood that internal controls will fail to prevent or detect material misstatements.", hint: "رقابة خايبة بتفشل تمسك الغلط (fail to prevent/detect).", explanation: "خطر إن سيستم الشركة ميكتشفش الغلط وقت حدوثه." },
+                        { id: "E23", q: "Provide the exact definition of Planned Detection Risk.", a: "Risk that the audit evidence for an audit objective will fail to detect misstatements.", hint: "أدلة المراجع اللي بتفشل تمسك الغلط (audit evidence fail).", explanation: "الخطر الوحيد اللي في إيد المراجع وبيتحكم فيه بشغله والأدلة اللي بيجمعها." },
+                        { id: "E24", q: "Why is inventory considered an account with a high likelihood of misstatement?", a: "Because it involves valuation complexities, obsolescence, and physical count issues.", hint: "المخزون خطر عشان: تقييمه رخم، بيبوظ، وجرده صعب.", explanation: "المخزون مشاكله كتير، طرق تسعيره مختلفة، وممكن البضاعة تعفن، وعدّها بياخد وقت." },
+                        { id: "E25", q: "How do relative audit costs influence assigning higher performance materiality?", a: "Costly accounts are allocated larger thresholds to balance audit cost against benefit.", hint: "الحساب الغالي بنديله سماحية وسقف أكبر.", explanation: "الحساب اللي مراجعته مكلفة زي الجرد بنديله نسبة غلط أعلى عشان نوفر فلوس ومجهود." }
+                    ]
+                },
+                sec3: {
+                    title: "Section 3: Internal Control",
+                    cards: [
+                        { id: "E1", q: "Define Internal Control.", a: "System designed and administered by management to provide reasonable assurance.", hint: "سيستم الإدارة عشان التأكيد المعقول.", explanation: "سيستم بتحطه الإدارة عشان تضمن إن فلوس الشركة في أمان وأهدافها بتتحقق." },
+                        { id: "E2", q: "In the systematic nature of internal controls, 'policies' are...", a: "Policies are the methods that work together as an integrated framework.", hint: "السياسات = الطرق (methods).", explanation: "السياسة هي القاعدة أو الطريقة اللي الموظفين بيمشوا عليها." },
+                        { id: "E3", q: "What does it mean for controls to be 'Embedded' or 'Integrated'?", a: "Embedded within business processes, part of natural workflow rather than afterthoughts.", hint: "مندمجة يعني جزء من الشغل الطبيعي.", explanation: "الرقابة مش حاجة روتينية بتتعمل في الآخر، دي جزء من السيستم زي إن الفاتورة مبتطبعش غير بالدفع." },
+                        { id: "E4", q: "Describe 'Continuous Monitoring' in internal control.", a: "Operate on an ongoing basis, detect promptly for timely corrective action.", hint: "مستمرة (Continuous) يعني شغالة طول الوقت.", explanation: "رقابة شغالة 24 ساعة تكتشف الغلط في ساعتها وتصلحه." },
+                        { id: "E5", q: "Define 'Control Activities' and their role.", a: "Policies and procedures to address risks threatening the achievement of objectives.", hint: "سياسات بتقلل الخطر (address risks).", explanation: "دي الأفعال الفعلية زي الإمضاء أو الجرد عشان نمنع الخطر." },
+                        { id: "E6", q: "List the three underlying principles of Control Activities.", a: "1. Risk Mitigation 2. Technology Controls 3. Policy Framework.", hint: "تقليل خطر، تكنولوجيا، سياسات.", explanation: "بنعملها عشان نقلل الخطر، ونعتمد ع التكنولوجيا، وتكون جوه سياسات محددة." },
+                        { id: "E7", q: "Define 'General Authorization' and provide a condition.", a: "Applies to routine transactions. Condition: Current Balance + New Order <= Credit Limit.", hint: "عام (General) = روتيني.", explanation: "تصريح أوتوماتيك لأي معاملة عادية للعميل طالما معداش الحد بتاعه." },
+                        { id: "E8", q: "When is 'Specific Authorization' required?", a: "Required for non-routine or unusual transactions, or those exceeding thresholds.", hint: "خاص (Specific) = مش روتيني أو ضخم.", explanation: "عمليات ضخمة محتاجة مدير يراجع ويمضي بنفسه." },
+                        { id: "E9", q: "Distinguish between 'Documents' and 'Records'.", a: "Documents = supporting materials (invoices). Records = accounting books (ledgers).", hint: "Document للورق، Record للدفاتر.", explanation: "دوكيومنت زي الفاتورة، ريكورد هو الدفتر اللي بتسجل فيه." },
+                        { id: "E10", q: "List four requirements for 'Adequate Documents and Records'.", a: "1. Pre-numbering 2. Timely Preparation 3. Multiple Uses 4. Correct Preparation.", hint: "مترقم، في وقته، كذا استخدام، متسجل صح.", explanation: "شروط الدفاتر المحترمة في أي شركة." },
+                        { id: "E11", q: "Why is 'Pre-numbering' of documents critical?", a: "Facilitate accounting for complete sets, mitigate duplicate use.", hint: "الترقيم بيمنع التكرار والورق يضيع.", explanation: "الترقيم بيخليك تكشف لو فيه فاتورة مفقودة أو حد استخدمها مرتين." },
+                        { id: "E12", q: "State the 'Core Principle' of Segregation of Duties.", a: "Duties with conflict of interest must not be concentrated in one person's hands.", hint: "ممنوع موظف يمسك كل حاجة عشان التعارض.", explanation: "مينفعش موظف يعمل كل حاجة من الألف للياء عشان هيسرقك." },
+                        { id: "E13", q: "Describe the 'Critical Separation' required between assets and accounting.", a: "Custody of assets must not have access to accounting records.", hint: "اللي معاه العهدة ميمسكش الدفاتر.", explanation: "أمين المخزن مينفعش يكون محاسب عشان ميسرقش ويعدل الدفاتر براحته." },
+                        { id: "E14", q: "List activities segregated in IT environments.", a: "Programming, computer operation, library, and data control.", hint: "افصل المبرمج عن المشغل.", explanation: "المبرمج اللي عمل الكود مينفعش هو اللي يشغل النظام يومياً." },
+                        { id: "E15", q: "How does 'Collusion' affect Segregation of Duties?", a: "Two or more employees collude to circumvent controls.", hint: "تواطؤ (Collusion) = اتنين اتفقوا يسرقوا.", explanation: "مهما فصلت، لو اتنين اتفقوا هيسرقوا الشركة." },
+                        { id: "E16", q: "Define 'Independent Checks'.", a: "Verification personnel must be independent of those originally preparing data.", hint: "فحص مستقل = راجع ورا غيرك.", explanation: "خلي موظف يراجع شغل موظف تاني." },
+                        { id: "E17", q: "What is the role of the 'Internal Audit' department?", a: "Independent evaluation of control effectiveness across the organization.", hint: "المراجع الداخلي بيعمل تقييم للرقابة.", explanation: "بيراقب باقي الأقسام ويشوفهم ماشيين ع السيستم ولا لأ." },
+                        { id: "E18", q: "Distinguish between 'General Controls' and 'Application Controls'.", a: "General = all aspects of IT. Application = specific processing.", hint: "عام للسيستم، تطبيق لبرنامج معين.", explanation: "عام يعني رقابة على السيرفر، تطبيق يعني باسوورد لبرنامج الحسابات." },
+                        { id: "E19", q: "List five categories of IT General Controls.", a: "Administration, Separation of Duties, Backup, Hardware Controls, Application Controls.", hint: "إدارة، فصل، باك أب، هاردوير، تطبيق.", explanation: "تصنيفات الرقابة في أنظمة الكمبيوتر." },
+                        { id: "E20", q: "Identify three sub-categories of 'Application Controls'.", a: "Input Controls, Processing Controls, Output Controls.", hint: "مدخل، معالجة، مخرج.", explanation: "رقابة على الداتا وهي داخله، وهي بتتحسب، ولما تطبع." },
+                        { id: "E21", q: "Outline the 'Four-Step Assessment Process' for control risk.", a: "1. Obtain Understanding 2. Assess CR 3. Design & Perform Tests 4. Decide PDR.", hint: "افهم، قيم، اختبر، حدد الخطر.", explanation: "خطوات تقييم نظام الشركة عشان نحدد هنراجع قد إيه." },
+                        { id: "E22", q: "Name three techniques to 'Obtain Understanding' of controls.", a: "Narrative, Flowchart, Questionnaire.", hint: "حكاية، خريطة، استبيان.", explanation: "عشان تفهم شركتهم اكتب قصة أو ارسم فلوشارت أو وزع أسئلة." },
+                        { id: "E23", q: "Define three levels of the 'Control Deficiencies Hierarchy'.", a: "1. Control Deficiency 2. Significant Deficiency 3. Material Weakness.", hint: "عيب عادي -> مهم -> مادي كارثي.", explanation: "تدرج المشاكل في نظام الرقابة." },
+                        { id: "E24", q: "List the 'Four Audit Procedures' used for tests of controls.", a: "Inquiries, Inspection, Observation, Reperformance.", hint: "اسأل، افحص، لاحظ، عيد التنفيذ.", explanation: "طرق المراجع عشان يختبر الرقابة." },
+                        { id: "E25", q: "Explain the 'Inverse Relationship' principle regarding testing extent.", a: "Lower assessed control risk -> More extensive tests of controls.", hint: "خطر قليل = شغل واختبارات رقابة كتير.", explanation: "كل ما نثق في الرقابة ونقلل الخطر، لازم نختبرها كتير عشان نعتمد عليها بجد." }
+                    ]
+                },
+                sec4: {
+                    title: "Section 4: Fraud",
+                    cards: [
+                        { id: "E1", q: "Define Fraudulent Financial Reporting.", a: "Intentional misstatement or omission with the intent to deceive users.", hint: "تقارير مضروبة = متعمد يخدعك.", explanation: "تلاعب مقصود لتكبير أو تصغير الأرباح لخداع المستثمرين." },
+                        { id: "E2", q: "Core difference between Fraudulent Reporting and Misappropriation?", a: "Reporting by higher levels of management; Misappropriation by employees.", hint: "تقارير = إدارة عليا، سرقة = موظفين.", explanation: "المدير بيلعب في الورق، الموظف بيسرق البضاعة." },
+                        { id: "E3", q: "Explain the concept of 'Earnings Management'.", a: "Intention to misstate income to meet earnings targets and projections.", hint: "بيظبط الدخل عشان يوصل للتارجت.", explanation: "الإدارة بتلعب في الأرقام عشان توصل لربح معين كانت واعدة بيه السوق." },
+                        { id: "E4", q: "Describe 'Income Smoothing'.", a: "Shifting income from year to year to reduce fluctuations.", hint: "تنعيم الدخل = بيقلل التذبذب.", explanation: "بناخد أرباح سنة حلوة نخبيها لسنة وحشة عشان الأرباح تبان مستقرة." },
+                        { id: "E5", q: "List the three conditions of the Fraud Triangle.", a: "1. Incentives/Pressures 2. Opportunities 3. Attitudes/Rationalization.", hint: "ضغط، فرصة، تبرير.", explanation: "عوامل الغش الثلاثة اللي بتخلي أي حد يسرق." },
+                        { id: "E6", q: "Define the 'Opportunities' element.", a: "Circumstances and situational factors enabling fraudulent acts.", hint: "ظروف بتسمح بالسرقة.", explanation: "غياب الرقابة أو ضعفها بيعمل فرصة سهلة للحرامي." },
+                        { id: "E7", q: "What are the two primary components of 'Incentives/Pressures'?", a: "Financial Pressures & Personal Pressures.", hint: "ضغوط مالية وشخصية.", explanation: "إما الشركة مديونة، أو الموظف مديون." },
+                        { id: "E8", q: "Why are 'Opportunities' significant to management?", a: "Most controllable element; weak controls increase opportunities dramatically.", hint: "أكتر حاجة نقدر نتحكم فيها.", explanation: "عشان الإدارة تقدر تقفل الفرصة بوضع نظام رقابة قوي." },
+                        { id: "E9", q: "How does organizational culture influence 'Attitudes/Rationalization'?", a: "Pressure causes individuals to rationalize committing a dishonest act.", hint: "بيئة الشغل بتضغط فبتبرر السرقة.", explanation: "الضغط وتارجت الشركة الصعب بيخلي الموظف يقول (أنا مظلوم ودي حقوقي)." },
+                        { id: "E10", q: "Identify three risk factors for 'Threats to Financial Stability'.", a: "1. Significant financial losses. 2. Recurring negative cash flows. 3. Adverse trends.", hint: "خساير، تدفقات سلبية، أزمات.", explanation: "الحاجات دي بتخلي الإدارة مرعوبة وتغش في الورق." },
+                        { id: "E11", q: "Significant related-party transactions represent which element?", a: "Nature of Industry/Operations; represents the Opportunities element.", hint: "صفقات مع القرايب = فرصة للسرقة.", explanation: "البيع للشركات التابعة بيسهل اللعب في الأسعار." },
+                        { id: "E12", q: "List three 'Warning Signs' of Ineffective Monitoring.", a: "1. Ineffective Board Oversight. 2. Inadequate Monitoring. 3. High Turnover.", hint: "إشراف فاشل، رقابة ضعيفة، استقالات كتير.", explanation: "علامات بتوضح إن الشركة سايبة ومفيهاش نظام." },
+                        { id: "E13", q: "Maintaining stock price to protect personal wealth is which risk factor?", a: "Attitude/Rationalization (Excessive Interest in Stock Prices).", hint: "مهتم بسعر السهم = تبرير.", explanation: "المدير عايز سعر السهم يفضل عالي عشان ثروته الشخصية تزيد." },
+                        { id: "E14", q: "Describe the 'Model Employee Paradox'.", a: "Perpetrators often appear as top-performing model employees in positions of trust.", hint: "الحرامي بيبان موظف مثالي وفي منصب ثقة.", explanation: "الخاين دايماً بيبان ملاك وشغال كويس عشان محدش يشك فيه." },
+                        { id: "E15", q: "Three primary focuses when assessing 'Misappropriation Risk'?", a: "1. Personal Financial Obligations 2. Compensation Issues 3. Adverse Relationships.", hint: "ديون شخصية، مشاكل مرتبات، علاقات سيئة.", explanation: "لو الموظف عليه قسط، مخنوق من مرتبه، وبيكره مديره.. هيسرق." },
+                        { id: "E16", q: "Significant personal debt triggers which factor?", a: "Incentives/Pressures (Personal Financial Obligations).", hint: "ديون كتير = ضغوط مالية.", explanation: "الديون دي أكبر ضغط بيجبر الموظف على الاختلاس." },
+                        { id: "E17", q: "Explain why 'Inadequate Segregation of Duties' is a risk factor.", a: "Creates opportunities for fraud to occur and remain undetected.", hint: "مفيش فصل سلطات = فرصة للسرقة.", explanation: "لو موظف بيعمل كل حاجة، محدش هيكشفه." },
+                        { id: "E18", q: "Define 'Questioning Mind' aspect of Professional Skepticism.", a: "Never accepting information at face value; seeking underlying substance.", hint: "متصدقش اللي بتشوفه، دور ورا الكلام.", explanation: "الشك المهني هو إنك تفترض إن الورق ده ممكن يكون ملعوب فيه." },
+                        { id: "E19", q: "What does 'Critical Evaluation of Audit Evidence' require?", a: "Evaluating appropriateness and sufficiency to protect against fraudulent information.", hint: "قيم الدليل كويس عشان متتخدعش.", explanation: "اوزن الدليل كويس قبل ما توافق عليه." },
+                        { id: "E20", q: "List the five sources to assess fraud risks.", a: "Team Communication, Inquiries of Management, Risk Factors, Analytical Procedures, Other Info.", hint: "تواصل، اسأل، حلل، طلع المخاطر.", explanation: "طرق المراجع لاكتشاف مكان الغش المتوقع." },
+                        { id: "E21", q: "What must the audit team discuss during communication phase?", a: "How/where statements are susceptible to material misstatement due to fraud.", hint: "بيناقشوا إزاي الغش بيحصل وبيستخبى.", explanation: "عصف ذهني للفريق يتخيلوا الشركة بتغش في إيه." },
+                        { id: "E22", q: "Identify three elements of the AICPA framework for corporate governance.", a: "1. Culture of honesty. 2. Management's evaluation of risks. 3. Audit committee oversight.", hint: "أمانة، تقييم، إشراف.", explanation: "عواميد الحوكمة السليمة لأي شركة محترمة." },
+                        { id: "E23", q: "Most effective way to prevent and deter fraud?", a: "Implement antifraud programs based on core values.", hint: "برامج ضد الغش مبنية على القيم.", explanation: "تأسيس الأخلاق في الشركة أحسن من مليون كاميرا مراقبة." },
+                        { id: "E24", q: "Three measures to minimize fraud risk?", a: "1. Prevention (Stop) 2. Deterrence (Discourage) 3. Detection (Identify).", hint: "امنع، خوّف، اكتشف.", explanation: "خطوات تقليل الغش بالترتيب الزمني." },
+                        { id: "E25", q: "Describe the role of the Audit Committee.", a: "Oversee financial reporting/internal control; deterrent to senior management fraud.", hint: "بتشرف وبتخوف الإدارة من السرقة.", explanation: "لجنة مستقلة بتراقب الإدارة العليا عشان متسرقش الشركة." }
+                    ]
+                },
+                sec5: {
+                    title: "Section 5: Audit Tests",
+                    cards: [
+                        { id: "E1", q: "Define Substantive Tests of Transactions.", a: "Evaluate if transactions correctly recorded to determine if 6 objectives satisfied.", hint: "بتتأكد إن المعاملات اتسجلت صح بالـ 6 أهداف.", explanation: "اختبار للحركات اليومية عشان نضمن دقتها وكمالها." },
+                        { id: "E2", q: "List four types of procedures used for Tests of Controls.", a: "Inquiries, Inspecting, Observation, Re-perform.", hint: "اسأل، افحص، لاحظ، عيد.", explanation: "الإجراءات الأربعة للتأكد إن الرقابة الداخلية شغالة." },
+                        { id: "E3", q: "Outline the Four-step approach to reduce assessed control risk.", a: "1. Apply Objectives 2. Identify Controls 3. Develop Tests 4. Design Substantive Tests.", hint: "أهداف ← رقابة ← اختبرها ← صمم اختبار أساسي.", explanation: "الاستراتيجية اللي بنبني بيها شغل المراجعة على أساس قوة الرقابة." },
+                        { id: "E4", q: "Define Tests of Details of Balances.", a: "Focusing on the ending balances of general ledger accounts (balance sheet).", hint: "بتركز على أرصدة النهاية للميزانية.", explanation: "بنراجع رصيد العملاء الإجمالي آخر السنة مش كل فاتورة لوحدها." },
+                        { id: "E5", q: "List the six transaction-related audit objectives.", a: "Occurrence, Completeness, Accuracy, Posting/Summarization, Classification, Timing.", hint: "حدوث، اكتمال، دقة، ترحيل، تبويب، توقيت.", explanation: "الـ 6 شروط لأي حركة بتتسجل في دفتر اليومية." },
+                        { id: "E6", q: "List the nine balance-related audit objectives.", a: "Existence, Completeness, Accuracy, Classification, Cutoff, Detail Tie-in, Realizable Value, Rights/Obligations, Presentation.", hint: "نفس الـ 6 وزود: وجود، ربط، حقوق، قيمة، عرض.", explanation: "الشروط المطلوبة لرصيد الميزانية آخر السنة." },
+                        { id: "E7", q: "Payroll SAP: 500 employees, 150k salary. Recorded 80M. Benchmark 2%. Analyze.", a: "Expected = 75M. Variance = 6.67%. Exceeds 2%, requires further investigation.", hint: "اضرب العدد في المرتب، لو الفرق معدي 2% يبقى فيه سرقة.", explanation: "المرتب المتوقع 75 مليون. هما دفعوا 80 مليون، الفرق كبير لازم نحقق فيه." },
+                        { id: "E8", q: "Depreciation SAP: Asset 1.2B, Rate 10%. Calculate predicted expense.", a: "1,200,000,000 * 0.10 = 120,000,000 EGP.", hint: "مسألة هدية، اضرب الأصل في النسبة.", explanation: "إجراء تحليلي للتأكد من حساب الإهلاك بسرعة." },
+                        { id: "E9", q: "Define the 'Occurrence' objective for transactions.", a: "Recorded transactions actually occurred (prevents fictitious transactions).", hint: "حصلت بجد وبتمنع الفواتير المضروبة.", explanation: "هدف بيمنع تضخيم الإيرادات بمبيعات لم تحدث." },
+                        { id: "E10", q: "Define the 'Existence' objective for balances.", a: "Assets and liabilities actually exist (prevents inclusion of fictitious items).", hint: "الأصول موجودة بجد مش وهمية.", explanation: "التأكد إن المخزون اللي في الورق موجود في المخزن." },
+                        { id: "E11", q: "What are the two main focuses in the Design of the Audit Program?", a: "1. Risk Assessment Procedures 2. Emphasis on Audit Objectives.", hint: "تقييم المخاطر وتأكيد الأهداف.", explanation: "برنامج المراجعة مبني على تقييم خطر الشركة والوصول لأهداف المراجعة." },
+                        { id: "E12", q: "Name the three parts of an Audit Program.", a: "1. TOC & STOT 2. Substantive Analytical 3. Tests of Details of Balances.", hint: "رقابة ومعاملات، بعدين تحليل، بعدين أرصدة.", explanation: "تسلسل الشغل الفعلي في المراجعة." },
+                        { id: "E13", q: "Define 'Substantive Analytical Procedures'.", a: "Use of comparisons and relationships to identify potential misstatements.", hint: "مقارنات وعلاقات لاكتشاف الأرقام الغريبة.", explanation: "طريقة ذكية لاكتشاف الغش بدون فحص كل ورقة." },
+                        { id: "E14", q: "Explain the 'Realizable Value' objective.", a: "Assets recorded at estimated realizable value (accounts for obsolescence/bad debt).", hint: "الرقم اللي هيتلم بجد بعد استبعاد المعدوم.", explanation: "حساب قيمة الأصل الحقيقية القابلة للتحصيل." },
+                        { id: "E15", q: "Describe Phase I of the Audit Process.", a: "Plan and Design involves developing an effective audit approach by assessing risks.", hint: "أول مرحلة: خطط وقيم الخطر.", explanation: "فهم الشركة وبناء الخطة (القهوة قبل الشغل)." },
+                        { id: "E16", q: "Describe Phase IV of the Audit Process.", a: "Complete and Report requires wrapping up findings and issuing the formal Audit Report.", hint: "آخر مرحلة: طلع التقرير.", explanation: "تقفيل الشغل وطباعة التقرير للمساهمين." },
+                        { id: "E17", q: "What is the 'Detail Tie-in' objective?", a: "Subsidiary ledgers match general ledgers and align with master files.", hint: "الفرعي بيطابق الإجمالي.", explanation: "الـ 1000 عميل كل واحد حسابه بيساوي الإجمالي بتاع دفتر الأستاذ." },
+                        { id: "E18", q: "Explain 'Posting and Summarization' as an audit objective.", a: "Accurate transfer from journals to ledgers.", hint: "الترحيل صح للدفاتر.", explanation: "الأرقام اتجمعت واترحلت بدون أخطاء حسابية." },
+                        { id: "E19", q: "Difference between 'Classification' for transactions and balances?", a: "Transactions: correct account codes. Balances: current vs long-term.", hint: "المعاملات = كود، الأرصدة = متداول ولا طويل الأجل.", explanation: "التصنيف في اليومية بيتعلق بالكود، وفي الميزانية بيتعلق بالسيولة (أجل طويل ولا قصير)." },
+                        { id: "E20", q: "List key decisions involved in designing tests of details of balances.", a: "Assess Risks, Set Materiality, Assess CR, Design TOC&STOT, Design SAP, Design TDB.", hint: "قيم الخطر، السقف، صمم بالترتيب.", explanation: "الخطوات الكاملة لتصميم المرحلة الأخيرة من الاختبارات." },
+                        { id: "E21", q: "Define the 'Rights and Obligations' objective.", a: "Legal ownership and actual obligations (truly owns assets and owes liabilities).", hint: "ملكيتك وديونك بجد قانوناً.", explanation: "السيارات اللي مكتوبة أصول تكون بأسامي الشركة فعلاً." },
+                        { id: "E22", q: "Explain the use of 'Industry Benchmarks'.", a: "Comparing an entity's ratio against industry averages or competitors.", hint: "قارن نسبتك بمتوسط السوق.", explanation: "لمعرفة كفاءة الشركة واكتشاف الأرقام غير المنطقية." },
+                        { id: "E23", q: "AR 40M, Sales 200M. Industry ratio 8. Analyze.", a: "Ratio is 5. Since 5 < 8, indicates potential overstatement of AR or collection failure.", hint: "النسبة طلعت أقل من السوق (5 أقل من 8) يبقى فيه مشكلة في التحصيل.", explanation: "الشركة بطيئة جداً في تحصيل فلوسها مقارنة بباقي السوق." },
+                        { id: "E24", q: "What is the 'Presentation and Disclosure' objective?", a: "Clear descriptions and necessary footnotes; adherence to framework.", hint: "الوصف والإيضاحات واضحة.", explanation: "المعلومات معروضة صح وفقاً للمعايير الدولية." },
+                        { id: "E25", q: "What does the 'Cutoff' objective for balances prevent?", a: "Prevents the shifting of balances between fiscal years.", hint: "الفاصل الزمني بيمنع نقل الأرقام بين السنين.", explanation: "عشان الإدارة متسجلش إيرادات السنة الجاية في السنة دي لتكبير الأرباح." }
+                    ]
+                }
+            };
+
+            // --- SAFE GLOBAL STATE INIT ---
+            let rawData;
+            try {
+                rawData = JSON.parse(localStorage.getItem('audit_master_db')) || {};
+            } catch (e) {
+                rawData = {};
+            }
+            
+            let globalProgress = {
+                sec1: rawData.sec1 || {},
+                sec2: rawData.sec2 || {},
+                sec3: rawData.sec3 || {},
+                sec4: rawData.sec4 || {},
+                sec5: rawData.sec5 || {}
+            };
+
+            let currentSectionKey = null;
+            let activeCards = [];
+            let currentIndex = 0;
+            let isFlipped = false;
+
+            // --- DOM ELEMENTS ---
+           // --- DOM ELEMENTS ---
+const viewDashboard = document.getElementById('dashboard-view');
+const viewStudy = document.getElementById('study-view');
+const sectionsGrid = document.getElementById('sections-grid');
+const studyTitle = document.getElementById('study-title');
+const filterSelect = document.getElementById('filter');
+
+const cardContainer = document.getElementById('flashcard-container');
+const emptyState = document.getElementById('empty-state');
+const cardInner = document.getElementById('flashcard-inner');
+const frontStatus = document.getElementById('front-status');
+const backStatus = document.getElementById('back-status');
+const cardId = document.getElementById('card-id');
+const cardQuestion = document.getElementById('card-question');
+const cardAnswer = document.getElementById('card-answer');
+const cardHint = document.getElementById('card-hint');
+const cardExplanation = document.getElementById('card-explanation');
+const explanationContainer = document.getElementById('explanation-container');
+const btnExplain = document.getElementById('btn-explain');
+const cardCounter = document.getElementById('card-counter');
+
+const btnHard = document.getElementById('btn-hard');
+const btnMedium = document.getElementById('btn-medium');
+const btnEasy = document.getElementById('btn-easy');
+
+const ratingContainer = document.getElementById('rating-container');
+            // --- CORE FUNCTIONS ---
+            function renderDashboard() {
+                sectionsGrid.innerHTML = '';
+                for (const [key, section] of Object.entries(auditData)) {
+                    const total = section.cards.length;
+                    let hard = 0, medium = 0, easy = 0, unrated = 0;
+                    
+                    section.cards.forEach(c => {
+                        const status = globalProgress[key]?.[c.id];
+                        if (status === 'hard') hard++;
+                        else if (status === 'medium') medium++;
+                        else if (status === 'easy') easy++;
+                        else unrated++;
+                    });
+
+                    const progressPct = (((easy + medium) / total) * 100).toFixed(0);
+
+                    sectionsGrid.innerHTML += `
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-all cursor-pointer transform hover:-translate-y-1" onclick="openSection('${key}')">
+                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center text-xl font-bold mb-4">
+                                ${key.replace('sec', '')}
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-800 mb-2">${section.title}</h3>
+                            <p class="text-sm text-slate-500 font-semibold mb-4">${total} كارت مراجعة</p>
+                            
+                            <div class="flex gap-2 text-xs font-bold text-center mb-4">
+                                <div class="flex-1 bg-green-50 text-green-600 rounded p-1" title="سهل">🟢 ${easy}</div>
+                                <div class="flex-1 bg-yellow-50 text-yellow-600 rounded p-1" title="متوسط">🟡 ${medium}</div>
+                                <div class="flex-1 bg-red-50 text-red-600 rounded p-1" title="صعب">🔴 ${hard}</div>
+                                <div class="flex-1 bg-slate-100 text-slate-500 rounded p-1" title="لم يقيم">⚪ ${unrated}</div>
+                            </div>
+                            
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1">
+                                <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: ${progressPct}%"></div>
+                            </div>
+                            <p class="text-xs text-slate-400 text-left font-bold" dir="ltr">${progressPct}% Mastered</p>
+                        </div>
+                    `;
+                }
+            }
+
+            function openSection(key) {
+                currentSectionKey = key;
+                activeCards = [...auditData[key].cards];
+                currentIndex = 0;
+                isFlipped = false;
+                filterSelect.value = 'all';
+                
+                studyTitle.textContent = auditData[key].title;
+                
+                viewDashboard.classList.add('hidden');
+                viewStudy.classList.remove('hidden');
+                
+                updateFilterCounts();
+                renderUI();
+            }
+
+            function goBack() {
+                currentSectionKey = null;
+                viewStudy.classList.add('hidden');
+                viewDashboard.classList.remove('hidden');
+                renderDashboard();
+            }
+
+            function applyFilter() {
+                const filterValue = filterSelect.value;
+                const allCards = auditData[currentSectionKey].cards;
+                const progress = globalProgress[currentSectionKey] || {};
+                
+                if (filterValue === 'all') {
+                    activeCards = [...allCards];
+                } else if (filterValue === 'unrated') {
+                    activeCards = allCards.filter(c => !progress[c.id]);
+                } else {
+                    activeCards = allCards.filter(c => progress[c.id] === filterValue);
+                }
+
+                currentIndex = 0;
+                isFlipped = false;
+                updateFlipStyle();
+                renderUI();
+                updateFilterCounts();
+            }
+
+            function updateFilterCounts() {
+                const progress = globalProgress[currentSectionKey] || {};
+                const counts = { all: auditData[currentSectionKey].cards.length, hard: 0, medium: 0, easy: 0, unrated: 0 };
+                
+                auditData[currentSectionKey].cards.forEach(c => {
+                    const status = progress[c.id];
+                    if (status) counts[status]++;
+                    else counts.unrated++;
+                });
+
+                filterSelect.options[0].text = `الكل (${counts.all})`;
+                filterSelect.options[1].text = `🔴 صعب (${counts.hard})`;
+                filterSelect.options[2].text = `🟡 متوسط (${counts.medium})`;
+                filterSelect.options[3].text = `🟢 سهل (${counts.easy})`;
+                filterSelect.options[4].text = `⚪ لم يقيم (${counts.unrated})`;
+            }
+
+            function resetSectionProgress() {
+                const progress = globalProgress[currentSectionKey] || {};
+                if (Object.keys(progress).length === 0) {
+                    alert("مفيش تقييمات تتمسح للسكشن ده، إنت لسه على الأبيض! 😅");
+                    return;
+                }
+                if (confirm("متأكد إنك عايز تمسح كل تقييمات السكشن ده وتبدأ من الصفر؟ 🗑️")) {
+                    globalProgress[currentSectionKey] = {};
+try {
+    localStorage.setItem('audit_master_db', JSON.stringify(globalProgress));
+} catch (e) {
+    console.error('LocalStorage Error:', e);
+}                    filterSelect.value = 'all';
+                    applyFilter();
+                }
+            }
+
+            function renderUI() {
+                explanationContainer.classList.add('hidden');
+                btnExplain.textContent = 'إظهار الشرح 💡';
+
+                if (activeCards.length === 0) {
+                    cardContainer.classList.add('hidden');
+                    ratingContainer.classList.add('hidden');
+                    document.getElementById('nav-container').classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    cardCounter.textContent = "لا يوجد كروت";
+                    return;
+                }
+
+                cardContainer.classList.remove('hidden');
+                ratingContainer.classList.remove('hidden');
+                document.getElementById('nav-container').classList.remove('hidden');
+                emptyState.classList.add('hidden');
+
+                const card = activeCards[currentIndex];
+                cardId.textContent = card.id;
+                cardQuestion.textContent = card.q;
+                cardAnswer.textContent = card.a;
+                cardHint.textContent = card.hint;
+                cardExplanation.textContent = card.explanation || "لا يوجد شرح متاح.";
+                cardCounter.textContent = `كارت ${currentIndex + 1} من ${activeCards.length}`;
+                
+                updateStatusUI(card.id);
+            }
+
+            function updateStatusUI(cardId) {
+                const status = globalProgress[currentSectionKey]?.[cardId];
+                
+                btnHard.className = "rate-btn flex-1 py-2 px-2 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 font-bold hover:bg-red-100 flex flex-col items-center gap-1 opacity-60";
+                btnMedium.className = "rate-btn flex-1 py-2 px-2 rounded-xl border-2 border-yellow-200 bg-yellow-50 text-yellow-600 font-bold hover:bg-yellow-100 flex flex-col items-center gap-1 opacity-60";
+                btnEasy.className = "rate-btn flex-1 py-2 px-2 rounded-xl border-2 border-green-200 bg-green-50 text-green-600 font-bold hover:bg-green-100 flex flex-col items-center gap-1 opacity-60";
+
+                let statusText = "لم يقيم";
+                let statusClass = "status-unrated";
+
+                if (status === 'hard') {
+                    btnHard.classList.remove('opacity-60');
+                    btnHard.classList.add('ring-2', 'ring-red-400', 'bg-red-100');
+                    statusText = "صعب"; statusClass = "status-hard";
+                } else if (status === 'medium') {
+                    btnMedium.classList.remove('opacity-60');
+                    btnMedium.classList.add('ring-2', 'ring-yellow-400', 'bg-yellow-100');
+                    statusText = "متوسط"; statusClass = "status-medium";
+                } else if (status === 'easy') {
+                    btnEasy.classList.remove('opacity-60');
+                    btnEasy.classList.add('ring-2', 'ring-green-400', 'bg-green-100');
+                    statusText = "سهل"; statusClass = "status-easy";
+                }
+
+                const classes = `absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded-full border ${statusClass}`;
+                frontStatus.className = classes; frontStatus.textContent = statusText;
+                backStatus.className = classes; backStatus.textContent = statusText;
+            }
+
+            function rateCard(level) {
+                const cardId = activeCards[currentIndex].id;
+                if (!globalProgress[currentSectionKey]) {
+                    globalProgress[currentSectionKey] = {};
+                }
+                globalProgress[currentSectionKey][cardId] = level;
+                localStorage.setItem('audit_master_db', JSON.stringify(globalProgress));
+                
+                updateStatusUI(cardId);
+                updateFilterCounts();
+            }
+
+            function toggleFlip() {
+                isFlipped = !isFlipped;
+                updateFlipStyle();
+            }
+
+            function updateFlipStyle() {
+                cardInner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+            }
+
+            function toggleExplanation(e) {
+                e.stopPropagation(); // Prevent flipping when clicking the button
+                if (explanationContainer.classList.contains('hidden')) {
+                    explanationContainer.classList.remove('hidden');
+                    btnExplain.textContent = 'إخفاء الشرح 🙈';
+                } else {
+                    explanationContainer.classList.add('hidden');
+                    btnExplain.textContent = 'إظهار الشرح 💡';
+                }
+            }
+
+            function nextCard() {
+                if (activeCards.length <= 1) return;
+                isFlipped = false;
+                updateFlipStyle();
+                setTimeout(() => { currentIndex = (currentIndex + 1) % activeCards.length; renderUI(); }, 150);
+            }
+
+            function prevCard() {
+                if (activeCards.length <= 1) return;
+                isFlipped = false;
+                updateFlipStyle();
+                setTimeout(() => { currentIndex = (currentIndex - 1 + activeCards.length) % activeCards.length; renderUI(); }, 150);
+            }
+
+            // Init App
+            renderDashboard();
+        </script>
+    </body>
+    </html>
